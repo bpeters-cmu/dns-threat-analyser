@@ -9,14 +9,15 @@ import (
 
 	"github.com/bpeters-cmu/dns-threat-analyser/graph/generated"
 	"github.com/bpeters-cmu/dns-threat-analyser/graph/model"
+	"github.com/bpeters-cmu/dns-threat-analyser/pkg/dns"
 )
 
-func (r *mutationResolver) Enque(ctx context.Context, ip string) (*model.IP, error) {
-
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) Enque(ctx context.Context, ip []string) (*model.IP, error) {
+	dns.HandleDnsLookups(ip)
+	return nil, nil
 }
 
-func (r *queryResolver) GetIPDetails(ctx context.Context, ip []string) ([]*model.IP, error) {
+func (r *queryResolver) GetIPDetails(ctx context.Context, ip string) ([]*model.IP, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 

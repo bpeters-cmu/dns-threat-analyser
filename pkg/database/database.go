@@ -2,25 +2,26 @@ package database
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"log"
 	"os"
+
+	"github.com/bpeters-cmu/dns-threat-analyser/graph/model"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func init() {
-	log.Println("Initializing SQLITE DB")
-	createDB()
-}
+var db *sql.DB
 
-func createDB() {
+func InitDB() {
 	os.Remove("./threat_analyser.db")
 
-	db, err := sql.Open("sqlite3", "./threat_analyser.db")
+	var err error
+	db, err = sql.Open("sqlite3", "./threat_analyser.db")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
 	createCmd := `
 	create table ip (ip_address TEXT PRIMARY KEY,
 					 uuid TEXT,
@@ -30,7 +31,46 @@ func createDB() {
 	`
 	_, err = db.Exec(createCmd)
 	if err != nil {
-		log.Printf("%q: %s\n", err, createCmd)
+		log.Fatal("Error creating DB table", err)
 		return
 	}
+}
+
+type Database interface {
+	SaveIp(ip *model.IP) error
+	GetIp(ipAddr string) error
+}
+
+type SqliteDB struct {
+}
+
+func (sqlDb *SqliteDB) SaveIp(ip *model.IP) error {
+	upsert, err := db.Prepare("INSERT OR REPLACE INTO ip (ip_address, uuid, created_at, updated_at, response_code) VALUES (?, ?, ?, ?, ?)")
+	defer upsert.Close()
+	if err != nil {
+		return errors.New(fmt.Sprint("ERROR preparing db insert statement:", err.Error()))
+	}
+	_, err = upsert.Exec(ip.IPAddress, ip.UUID, ip.CreatedAt, ip.UpdatedAt, ip.ResponseCode)
+
+	if err != nil {
+		return errors.New(fmt.Sprint("ERROR executing DB insert for ip:", ip.IPAddress, "Error:", err.Error()))
+	}
+	return nil
+}
+
+func (sqlDb *SqliteDB) GetIp(ipAddr string) (*model.IP, error) {
+	row := db.QueryRow("SELECT * FROM ip WHERE ip_address = ?", ipAddr)
+	ip := &model.IP{}
+
+	err := row.Scan(ip.IPAddress, ip.UUID, ip.CreatedAt, ip.UpdatedAt, ip.ResponseCode)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New(fmt.Sprint("Query for ip address:", ip.IPAddress, "returned no data"))
+		} else {
+			return nil, err
+		}
+
+	}
+	return ip, nil
+
 }

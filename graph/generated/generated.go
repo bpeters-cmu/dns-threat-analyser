@@ -52,19 +52,19 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		Enque func(childComplexity int, ip string) int
+		Enque func(childComplexity int, ip []string) int
 	}
 
 	Query struct {
-		GetIPDetails func(childComplexity int, ip []string) int
+		GetIPDetails func(childComplexity int, ip string) int
 	}
 }
 
 type MutationResolver interface {
-	Enque(ctx context.Context, ip string) (*model.IP, error)
+	Enque(ctx context.Context, ip []string) (*model.IP, error)
 }
 type QueryResolver interface {
-	GetIPDetails(ctx context.Context, ip []string) ([]*model.IP, error)
+	GetIPDetails(ctx context.Context, ip string) ([]*model.IP, error)
 }
 
 type executableSchema struct {
@@ -127,7 +127,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.Enque(childComplexity, args["ip"].(string)), true
+		return e.complexity.Mutation.Enque(childComplexity, args["ip"].([]string)), true
 
 	case "Query.getIPDetails":
 		if e.complexity.Query.GetIPDetails == nil {
@@ -139,7 +139,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.GetIPDetails(childComplexity, args["ip"].([]string)), true
+		return e.complexity.Query.GetIPDetails(childComplexity, args["ip"].(string)), true
 
 	}
 	return 0, false
@@ -205,9 +205,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "graph/schema.graphqls", Input: `# GraphQL schema example
-#
-# https://gqlgen.com/getting-started/
+	{Name: "graph/schema.graphqls", Input: `
 
 type Ip {
   uuid: ID!
@@ -219,12 +217,12 @@ type Ip {
 
 
 type Query {
-  getIPDetails(ip: [String!]): [Ip]
+  getIPDetails(ip: String!): [Ip]
 }
 
 
 type Mutation {
-  enque(ip: String!): Ip!
+  enque(ip: [String!]): Ip
 }
 
 scalar Time
@@ -239,10 +237,10 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 func (ec *executionContext) field_Mutation_enque_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
+	var arg0 []string
 	if tmp, ok := rawArgs["ip"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ip"))
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		arg0, err = ec.unmarshalOString2ᚕstringᚄ(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -269,10 +267,10 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 func (ec *executionContext) field_Query_getIPDetails_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 []string
+	var arg0 string
 	if tmp, ok := rawArgs["ip"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ip"))
-		arg0, err = ec.unmarshalOString2ᚕstringᚄ(ctx, tmp)
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -519,21 +517,18 @@ func (ec *executionContext) _Mutation_enque(ctx context.Context, field graphql.C
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().Enque(rctx, args["ip"].(string))
+		return ec.resolvers.Mutation().Enque(rctx, args["ip"].([]string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(*model.IP)
 	fc.Result = res
-	return ec.marshalNIp2ᚖgithubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐIP(ctx, field.Selections, res)
+	return ec.marshalOIp2ᚖgithubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐIP(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_getIPDetails(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -561,7 +556,7 @@ func (ec *executionContext) _Query_getIPDetails(ctx context.Context, field graph
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().GetIPDetails(rctx, args["ip"].([]string))
+		return ec.resolvers.Query().GetIPDetails(rctx, args["ip"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1840,9 +1835,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			out.Values[i] = graphql.MarshalString("Mutation")
 		case "enque":
 			out.Values[i] = ec._Mutation_enque(ctx, field)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2173,20 +2165,6 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) marshalNIp2githubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐIP(ctx context.Context, sel ast.SelectionSet, v model.IP) graphql.Marshaler {
-	return ec._Ip(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNIp2ᚖgithubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐIP(ctx context.Context, sel ast.SelectionSet, v *model.IP) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	return ec._Ip(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {

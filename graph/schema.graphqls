@@ -10,12 +10,12 @@ type Ip {
 
 
 type Query {
-  getIPDetails(ip: [String!]): [Ip]
+  getIPDetails(ip: String!): [Ip]
 }
 
 
 type Mutation {
-  enque(ip: String!): Ip!
+  enque(ip: [String!]): Ip
 }
 
 scalar Time
