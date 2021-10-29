@@ -10,7 +10,7 @@ import (
 	"github.com/bpeters-cmu/dns-threat-analyser/graph"
 	"github.com/bpeters-cmu/dns-threat-analyser/graph/generated"
 	"github.com/bpeters-cmu/dns-threat-analyser/pkg/auth"
-
+	_ "github.com/bpeters-cmu/dns-threat-analyser/pkg/database"
 	"github.com/go-chi/chi"
 )
 

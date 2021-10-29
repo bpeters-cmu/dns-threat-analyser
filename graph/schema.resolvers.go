@@ -12,6 +12,7 @@ import (
 )
 
 func (r *mutationResolver) Enque(ctx context.Context, ip string) (*model.IP, error) {
+
 	panic(fmt.Errorf("not implemented"))
 }
 
