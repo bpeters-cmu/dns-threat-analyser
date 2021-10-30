@@ -13,9 +13,21 @@ type Query {
   getIPDetails(ip: String!): [Ip]
 }
 
+type EnqueSuccess {
+  ip: Ip
+}
+
+type EnqueError {
+  ip: String!
+  message: String!
+}
+
+union EnqueStatus = EnqueSuccess | EnqueError
+
 
 type Mutation {
-  enque(ips: [String!]): String
+  enque(ips: [String!]): [EnqueStatus]
 }
+
 
 scalar Time

@@ -12,9 +12,16 @@ import (
 	"github.com/bpeters-cmu/dns-threat-analyser/pkg/dns"
 )
 
-func (r *mutationResolver) Enque(ctx context.Context, ips []string) (*string, error) {
-	dns.HandleDnsLookups(ips)
-	return nil, nil
+func (r *mutationResolver) Enque(ctx context.Context, ips []string) ([]model.EnqueStatus, error) {
+	resultsChan := make(chan model.EnqueStatus, len(ips))
+	response := make([]model.EnqueStatus, len(ips))
+	for _, ip := range ips {
+		go dns.HandleDnsLookup(ip, resultsChan)
+	}
+	for range resultsChan {
+		response = append(response, <-resultsChan)
+	}
+	return response, nil
 }
 
 func (r *queryResolver) GetIPDetails(ctx context.Context, ip string) ([]*model.IP, error) {
