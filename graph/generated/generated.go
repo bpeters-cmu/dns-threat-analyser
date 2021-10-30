@@ -52,7 +52,7 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		Enque func(childComplexity int, ip []string) int
+		Enque func(childComplexity int, ips []string) int
 	}
 
 	Query struct {
@@ -61,7 +61,7 @@ type ComplexityRoot struct {
 }
 
 type MutationResolver interface {
-	Enque(ctx context.Context, ip []string) (*model.IP, error)
+	Enque(ctx context.Context, ips []string) (*string, error)
 }
 type QueryResolver interface {
 	GetIPDetails(ctx context.Context, ip string) ([]*model.IP, error)
@@ -127,7 +127,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.Enque(childComplexity, args["ip"].([]string)), true
+		return e.complexity.Mutation.Enque(childComplexity, args["ips"].([]string)), true
 
 	case "Query.getIPDetails":
 		if e.complexity.Query.GetIPDetails == nil {
@@ -222,7 +222,7 @@ type Query {
 
 
 type Mutation {
-  enque(ip: [String!]): Ip
+  enque(ips: [String!]): String
 }
 
 scalar Time
@@ -238,14 +238,14 @@ func (ec *executionContext) field_Mutation_enque_args(ctx context.Context, rawAr
 	var err error
 	args := map[string]interface{}{}
 	var arg0 []string
-	if tmp, ok := rawArgs["ip"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ip"))
+	if tmp, ok := rawArgs["ips"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ips"))
 		arg0, err = ec.unmarshalOString2ᚕstringᚄ(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["ip"] = arg0
+	args["ips"] = arg0
 	return args, nil
 }
 
@@ -517,7 +517,7 @@ func (ec *executionContext) _Mutation_enque(ctx context.Context, field graphql.C
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().Enque(rctx, args["ip"].([]string))
+		return ec.resolvers.Mutation().Enque(rctx, args["ips"].([]string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -526,9 +526,9 @@ func (ec *executionContext) _Mutation_enque(ctx context.Context, field graphql.C
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.IP)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalOIp2ᚖgithubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐIP(ctx, field.Selections, res)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_getIPDetails(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {

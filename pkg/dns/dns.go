@@ -11,14 +11,17 @@ import (
 const spamhause = "zen.spamhaus.org"
 
 func HandleDnsLookups(ips []string) error {
+	log.Println("handle dns lookups")
 	for _, ip := range ips {
 		reversedIp := reverse(strings.Split(ip, "."))
 		query := strings.Join(reversedIp, ".") + "." + spamhause
-		stdout, err := exec.Command("host", query).Output()
+		log.Println(query)
+		stdout, err := exec.Command("dig", "+short", query).Output()
 		if err != nil {
+			log.Println("Err:" + err.Error())
 			return errors.New(fmt.Sprint("ERROR executing host command for dns lookup:", ip))
 		}
-		log.Println(stdout)
+		log.Println(string(stdout))
 
 	}
 	return nil

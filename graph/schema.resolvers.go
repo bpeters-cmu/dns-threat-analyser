@@ -12,8 +12,8 @@ import (
 	"github.com/bpeters-cmu/dns-threat-analyser/pkg/dns"
 )
 
-func (r *mutationResolver) Enque(ctx context.Context, ip []string) (*model.IP, error) {
-	dns.HandleDnsLookups(ip)
+func (r *mutationResolver) Enque(ctx context.Context, ips []string) (*string, error) {
+	dns.HandleDnsLookups(ips)
 	return nil, nil
 }
 

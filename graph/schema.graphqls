@@ -15,7 +15,7 @@ type Query {
 
 
 type Mutation {
-  enque(ip: [String!]): Ip
+  enque(ips: [String!]): String
 }
 
 scalar Time
