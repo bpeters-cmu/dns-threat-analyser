@@ -10,7 +10,7 @@ type Ip {
 
 
 type Query {
-  getIPDetails(ip: String!): [Ip]
+  getIPDetails(ip: String!): Ip
 }
 
 type EnqueSuccess {
@@ -18,8 +18,8 @@ type EnqueSuccess {
 }
 
 type EnqueError {
-  ip: String!
-  message: String!
+  ip_address: String!
+  error_message: String!
 }
 
 union EnqueStatus = EnqueSuccess | EnqueError

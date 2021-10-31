@@ -25,8 +25,8 @@ func InitDB() {
 	createCmd := `
 	create table ip (ip_address TEXT PRIMARY KEY,
 					 uuid TEXT,
-					 created_at TEXT,
-					 updated_at TEXT,
+					 created_at DATETIME,
+					 updated_at DATETIME,
 					 response_code TEXT);
 	`
 	_, err = db.Exec(createCmd)
@@ -38,7 +38,7 @@ func InitDB() {
 
 type Database interface {
 	SaveIp(ip *model.IP) error
-	GetIp(ipAddr string) error
+	GetIp(ipAddr string) (*model.IP, error)
 }
 
 type SqliteDB struct {
@@ -53,24 +53,25 @@ func (sqlDb *SqliteDB) SaveIp(ip *model.IP) error {
 	_, err = upsert.Exec(ip.IPAddress, ip.UUID, ip.CreatedAt, ip.UpdatedAt, ip.ResponseCode)
 
 	if err != nil {
-		return errors.New(fmt.Sprint("ERROR executing DB insert for ip:", ip.IPAddress, "Error:", err.Error()))
+		return errors.New(fmt.Sprint("ERROR executing DB insert:", err.Error()))
 	}
 	return nil
 }
 
 func (sqlDb *SqliteDB) GetIp(ipAddr string) (*model.IP, error) {
 	row := db.QueryRow("SELECT * FROM ip WHERE ip_address = ?", ipAddr)
-	ip := &model.IP{}
+	ip := model.IP{}
 
-	err := row.Scan(ip.IPAddress, ip.UUID, ip.CreatedAt, ip.UpdatedAt, ip.ResponseCode)
+	err := row.Scan(&ip.IPAddress, &ip.UUID, &ip.CreatedAt, &ip.UpdatedAt, &ip.ResponseCode)
+
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, errors.New(fmt.Sprint("Query for ip address:", ip.IPAddress, "returned no data"))
+			return nil, errors.New("Query returned no data")
 		} else {
 			return nil, err
 		}
 
 	}
-	return ip, nil
+	return &ip, nil
 
 }

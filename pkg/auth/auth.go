@@ -15,8 +15,8 @@ func Basic() func(http.Handler) http.Handler {
 			username, password, ok := r.BasicAuth()
 			if !ok {
 				log.Println("No Credentails Provided")
-				w.WriteHeader(http.StatusUnauthorized)
-				return
+				//w.WriteHeader(http.StatusUnauthorized)
+				//return
 			}
 			if credentials[username] != password {
 				log.Println("Invalid Credentails Provided")

@@ -5,10 +5,10 @@ package graph
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/bpeters-cmu/dns-threat-analyser/graph/generated"
 	"github.com/bpeters-cmu/dns-threat-analyser/graph/model"
+	"github.com/bpeters-cmu/dns-threat-analyser/pkg/database"
 	"github.com/bpeters-cmu/dns-threat-analyser/pkg/dns"
 )
 
@@ -16,16 +16,25 @@ func (r *mutationResolver) Enque(ctx context.Context, ips []string) ([]model.Enq
 	resultsChan := make(chan model.EnqueStatus, len(ips))
 	response := make([]model.EnqueStatus, len(ips))
 	for _, ip := range ips {
-		go dns.HandleDnsLookup(ip, resultsChan)
+		go dns.HandleDnsLookup(ip, &database.SqliteDB{}, resultsChan)
 	}
-	for range resultsChan {
+	for i := 0; i < cap(resultsChan); i++ {
 		response = append(response, <-resultsChan)
 	}
 	return response, nil
 }
 
-func (r *queryResolver) GetIPDetails(ctx context.Context, ip string) ([]*model.IP, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *queryResolver) GetIPDetails(ctx context.Context, ip string) (*model.IP, error) {
+	err := dns.ValidateIp(ip)
+	if err != nil {
+		return nil, err
+	}
+	db := database.SqliteDB{}
+	ipDetails, err := db.GetIp(ip)
+	if err != nil {
+		return nil, nil
+	}
+	return ipDetails, nil
 }
 
 // Mutation returns generated.MutationResolver implementation.
