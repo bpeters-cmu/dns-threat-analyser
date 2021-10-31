@@ -16,7 +16,7 @@ func Basic() func(http.Handler) http.Handler {
 			if !ok {
 				log.Println("No Credentails Provided")
 				w.WriteHeader(http.StatusUnauthorized)
-				//return
+				return
 			}
 			if credentials[username] != password {
 				log.Println("Invalid Credentails Provided")
