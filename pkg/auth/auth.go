@@ -15,7 +15,7 @@ func Basic() func(http.Handler) http.Handler {
 			username, password, ok := r.BasicAuth()
 			if !ok {
 				log.Println("No Credentails Provided")
-				//w.WriteHeader(http.StatusUnauthorized)
+				w.WriteHeader(http.StatusUnauthorized)
 				//return
 			}
 			if credentials[username] != password {
@@ -23,7 +23,6 @@ func Basic() func(http.Handler) http.Handler {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
-			log.Println("Success login")
 
 			next.ServeHTTP(w, r)
 		})

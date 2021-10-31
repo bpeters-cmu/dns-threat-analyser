@@ -6,22 +6,21 @@ import (
 	"time"
 )
 
-type EnqueStatus interface {
-	IsEnqueStatus()
+type Status interface {
+	IsStatus()
 }
 
-type EnqueError struct {
+type Error struct {
 	IPAddress    string `json:"ip_address"`
 	ErrorMessage string `json:"error_message"`
+	ErrorCode    string `json:"error_code"`
 }
 
-func (EnqueError) IsEnqueStatus() {}
-
-type EnqueSuccess struct {
-	IP *IP `json:"ip"`
+type ErrorStatus struct {
+	Error *Error `json:"error"`
 }
 
-func (EnqueSuccess) IsEnqueStatus() {}
+func (ErrorStatus) IsStatus() {}
 
 type IP struct {
 	UUID         string    `json:"uuid"`
@@ -30,3 +29,9 @@ type IP struct {
 	ResponseCode string    `json:"response_code"`
 	IPAddress    string    `json:"ip_address"`
 }
+
+type SuccessStatus struct {
+	IP *IP `json:"ip"`
+}
+
+func (SuccessStatus) IsStatus() {}

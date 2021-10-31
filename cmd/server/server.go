@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/99designs/gqlgen/graphql/handler"
-	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/bpeters-cmu/dns-threat-analyser/graph"
 	"github.com/bpeters-cmu/dns-threat-analyser/graph/generated"
 	"github.com/bpeters-cmu/dns-threat-analyser/pkg/auth"
@@ -31,9 +30,8 @@ func main() {
 
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{}}))
 
-	router.Handle("/", playground.Handler("GraphQL playground", "/graphql"))
 	router.Handle("/graphql", srv)
 
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
+	log.Printf("Graphql endpoint serving at http://localhost:%s/query", port)
 	log.Fatal(http.ListenAndServe(":"+port, router))
 }

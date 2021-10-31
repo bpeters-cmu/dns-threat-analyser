@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql"
@@ -44,13 +45,14 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
-	EnqueError struct {
+	Error struct {
+		ErrorCode    func(childComplexity int) int
 		ErrorMessage func(childComplexity int) int
 		IPAddress    func(childComplexity int) int
 	}
 
-	EnqueSuccess struct {
-		IP func(childComplexity int) int
+	ErrorStatus struct {
+		Error func(childComplexity int) int
 	}
 
 	IP struct {
@@ -68,13 +70,17 @@ type ComplexityRoot struct {
 	Query struct {
 		GetIPDetails func(childComplexity int, ip string) int
 	}
+
+	SuccessStatus struct {
+		IP func(childComplexity int) int
+	}
 }
 
 type MutationResolver interface {
-	Enque(ctx context.Context, ips []string) ([]model.EnqueStatus, error)
+	Enque(ctx context.Context, ips []string) ([]model.Status, error)
 }
 type QueryResolver interface {
-	GetIPDetails(ctx context.Context, ip string) (*model.IP, error)
+	GetIPDetails(ctx context.Context, ip string) (model.Status, error)
 }
 
 type executableSchema struct {
@@ -92,26 +98,33 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	_ = ec
 	switch typeName + "." + field {
 
-	case "EnqueError.error_message":
-		if e.complexity.EnqueError.ErrorMessage == nil {
+	case "Error.error_code":
+		if e.complexity.Error.ErrorCode == nil {
 			break
 		}
 
-		return e.complexity.EnqueError.ErrorMessage(childComplexity), true
+		return e.complexity.Error.ErrorCode(childComplexity), true
 
-	case "EnqueError.ip_address":
-		if e.complexity.EnqueError.IPAddress == nil {
+	case "Error.error_message":
+		if e.complexity.Error.ErrorMessage == nil {
 			break
 		}
 
-		return e.complexity.EnqueError.IPAddress(childComplexity), true
+		return e.complexity.Error.ErrorMessage(childComplexity), true
 
-	case "EnqueSuccess.ip":
-		if e.complexity.EnqueSuccess.IP == nil {
+	case "Error.ip_address":
+		if e.complexity.Error.IPAddress == nil {
 			break
 		}
 
-		return e.complexity.EnqueSuccess.IP(childComplexity), true
+		return e.complexity.Error.IPAddress(childComplexity), true
+
+	case "ErrorStatus.error":
+		if e.complexity.ErrorStatus.Error == nil {
+			break
+		}
+
+		return e.complexity.ErrorStatus.Error(childComplexity), true
 
 	case "Ip.created_at":
 		if e.complexity.IP.CreatedAt == nil {
@@ -171,6 +184,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.GetIPDetails(childComplexity, args["ip"].(string)), true
+
+	case "SuccessStatus.ip":
+		if e.complexity.SuccessStatus.IP == nil {
+			break
+		}
+
+		return e.complexity.SuccessStatus.IP(childComplexity), true
 
 	}
 	return 0, false
@@ -246,25 +266,29 @@ type Ip {
   ip_address: String!
 }
 
-
-type Query {
-  getIPDetails(ip: String!): Ip
-}
-
-type EnqueSuccess {
-  ip: Ip
-}
-
-type EnqueError {
+type Error {
   ip_address: String!
   error_message: String!
+  error_code: String!
 }
 
-union EnqueStatus = EnqueSuccess | EnqueError
+type ErrorStatus {
+  error: Error!
+}
+
+type SuccessStatus {
+  ip: Ip!
+}
+
+union Status = SuccessStatus | ErrorStatus
+
+type Query {
+  getIPDetails(ip: String!): Status!
+}
 
 
 type Mutation {
-  enque(ips: [String!]): [EnqueStatus]
+  enque(ips: [String!]): [Status!]
 }
 
 
@@ -360,7 +384,7 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _EnqueError_ip_address(ctx context.Context, field graphql.CollectedField, obj *model.EnqueError) (ret graphql.Marshaler) {
+func (ec *executionContext) _Error_ip_address(ctx context.Context, field graphql.CollectedField, obj *model.Error) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -368,7 +392,7 @@ func (ec *executionContext) _EnqueError_ip_address(ctx context.Context, field gr
 		}
 	}()
 	fc := &graphql.FieldContext{
-		Object:     "EnqueError",
+		Object:     "Error",
 		Field:      field,
 		Args:       nil,
 		IsMethod:   false,
@@ -395,7 +419,7 @@ func (ec *executionContext) _EnqueError_ip_address(ctx context.Context, field gr
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _EnqueError_error_message(ctx context.Context, field graphql.CollectedField, obj *model.EnqueError) (ret graphql.Marshaler) {
+func (ec *executionContext) _Error_error_message(ctx context.Context, field graphql.CollectedField, obj *model.Error) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -403,7 +427,7 @@ func (ec *executionContext) _EnqueError_error_message(ctx context.Context, field
 		}
 	}()
 	fc := &graphql.FieldContext{
-		Object:     "EnqueError",
+		Object:     "Error",
 		Field:      field,
 		Args:       nil,
 		IsMethod:   false,
@@ -430,7 +454,7 @@ func (ec *executionContext) _EnqueError_error_message(ctx context.Context, field
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _EnqueSuccess_ip(ctx context.Context, field graphql.CollectedField, obj *model.EnqueSuccess) (ret graphql.Marshaler) {
+func (ec *executionContext) _Error_error_code(ctx context.Context, field graphql.CollectedField, obj *model.Error) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -438,7 +462,7 @@ func (ec *executionContext) _EnqueSuccess_ip(ctx context.Context, field graphql.
 		}
 	}()
 	fc := &graphql.FieldContext{
-		Object:     "EnqueSuccess",
+		Object:     "Error",
 		Field:      field,
 		Args:       nil,
 		IsMethod:   false,
@@ -448,18 +472,56 @@ func (ec *executionContext) _EnqueSuccess_ip(ctx context.Context, field graphql.
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.IP, nil
+		return obj.ErrorCode, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.IP)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOIp2ᚖgithubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐIP(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ErrorStatus_error(ctx context.Context, field graphql.CollectedField, obj *model.ErrorStatus) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "ErrorStatus",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Error, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Error)
+	fc.Result = res
+	return ec.marshalNError2ᚖgithubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐError(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Ip_uuid(ctx context.Context, field graphql.CollectedField, obj *model.IP) (ret graphql.Marshaler) {
@@ -671,9 +733,9 @@ func (ec *executionContext) _Mutation_enque(ctx context.Context, field graphql.C
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]model.EnqueStatus)
+	res := resTmp.([]model.Status)
 	fc.Result = res
-	return ec.marshalOEnqueStatus2ᚕgithubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐEnqueStatus(ctx, field.Selections, res)
+	return ec.marshalOStatus2ᚕgithubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐStatusᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_getIPDetails(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -708,11 +770,14 @@ func (ec *executionContext) _Query_getIPDetails(ctx context.Context, field graph
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.IP)
+	res := resTmp.(model.Status)
 	fc.Result = res
-	return ec.marshalOIp2ᚖgithubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐIP(ctx, field.Selections, res)
+	return ec.marshalNStatus2githubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐStatus(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -784,6 +849,41 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	res := resTmp.(*introspection.Schema)
 	fc.Result = res
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _SuccessStatus_ip(ctx context.Context, field graphql.CollectedField, obj *model.SuccessStatus) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "SuccessStatus",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IP, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.IP)
+	fc.Result = res
+	return ec.marshalNIp2ᚖgithubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐIP(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -1912,24 +2012,24 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    ************************** interface.gotpl ***************************
 
-func (ec *executionContext) _EnqueStatus(ctx context.Context, sel ast.SelectionSet, obj model.EnqueStatus) graphql.Marshaler {
+func (ec *executionContext) _Status(ctx context.Context, sel ast.SelectionSet, obj model.Status) graphql.Marshaler {
 	switch obj := (obj).(type) {
 	case nil:
 		return graphql.Null
-	case model.EnqueSuccess:
-		return ec._EnqueSuccess(ctx, sel, &obj)
-	case *model.EnqueSuccess:
+	case model.SuccessStatus:
+		return ec._SuccessStatus(ctx, sel, &obj)
+	case *model.SuccessStatus:
 		if obj == nil {
 			return graphql.Null
 		}
-		return ec._EnqueSuccess(ctx, sel, obj)
-	case model.EnqueError:
-		return ec._EnqueError(ctx, sel, &obj)
-	case *model.EnqueError:
+		return ec._SuccessStatus(ctx, sel, obj)
+	case model.ErrorStatus:
+		return ec._ErrorStatus(ctx, sel, &obj)
+	case *model.ErrorStatus:
 		if obj == nil {
 			return graphql.Null
 		}
-		return ec._EnqueError(ctx, sel, obj)
+		return ec._ErrorStatus(ctx, sel, obj)
 	default:
 		panic(fmt.Errorf("unexpected type %T", obj))
 	}
@@ -1939,24 +2039,29 @@ func (ec *executionContext) _EnqueStatus(ctx context.Context, sel ast.SelectionS
 
 // region    **************************** object.gotpl ****************************
 
-var enqueErrorImplementors = []string{"EnqueError", "EnqueStatus"}
+var errorImplementors = []string{"Error"}
 
-func (ec *executionContext) _EnqueError(ctx context.Context, sel ast.SelectionSet, obj *model.EnqueError) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, enqueErrorImplementors)
+func (ec *executionContext) _Error(ctx context.Context, sel ast.SelectionSet, obj *model.Error) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, errorImplementors)
 
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("EnqueError")
+			out.Values[i] = graphql.MarshalString("Error")
 		case "ip_address":
-			out.Values[i] = ec._EnqueError_ip_address(ctx, field, obj)
+			out.Values[i] = ec._Error_ip_address(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
 		case "error_message":
-			out.Values[i] = ec._EnqueError_error_message(ctx, field, obj)
+			out.Values[i] = ec._Error_error_message(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "error_code":
+			out.Values[i] = ec._Error_error_code(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -1971,19 +2076,22 @@ func (ec *executionContext) _EnqueError(ctx context.Context, sel ast.SelectionSe
 	return out
 }
 
-var enqueSuccessImplementors = []string{"EnqueSuccess", "EnqueStatus"}
+var errorStatusImplementors = []string{"ErrorStatus", "Status"}
 
-func (ec *executionContext) _EnqueSuccess(ctx context.Context, sel ast.SelectionSet, obj *model.EnqueSuccess) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, enqueSuccessImplementors)
+func (ec *executionContext) _ErrorStatus(ctx context.Context, sel ast.SelectionSet, obj *model.ErrorStatus) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, errorStatusImplementors)
 
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("EnqueSuccess")
-		case "ip":
-			out.Values[i] = ec._EnqueSuccess_ip(ctx, field, obj)
+			out.Values[i] = graphql.MarshalString("ErrorStatus")
+		case "error":
+			out.Values[i] = ec._ErrorStatus_error(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2094,12 +2202,42 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_getIPDetails(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
 				return res
 			})
 		case "__type":
 			out.Values[i] = ec._Query___type(ctx, field)
 		case "__schema":
 			out.Values[i] = ec._Query___schema(ctx, field)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var successStatusImplementors = []string{"SuccessStatus", "Status"}
+
+func (ec *executionContext) _SuccessStatus(ctx context.Context, sel ast.SelectionSet, obj *model.SuccessStatus) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, successStatusImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SuccessStatus")
+		case "ip":
+			out.Values[i] = ec._SuccessStatus_ip(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2376,6 +2514,16 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) marshalNError2ᚖgithubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐError(ctx context.Context, sel ast.SelectionSet, v *model.Error) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Error(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalID(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -2389,6 +2537,26 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNIp2ᚖgithubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐIP(ctx context.Context, sel ast.SelectionSet, v *model.IP) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Ip(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNStatus2githubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐStatus(ctx context.Context, sel ast.SelectionSet, v model.Status) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Status(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
@@ -2702,14 +2870,7 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return graphql.MarshalBoolean(*v)
 }
 
-func (ec *executionContext) marshalOEnqueStatus2githubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐEnqueStatus(ctx context.Context, sel ast.SelectionSet, v model.EnqueStatus) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._EnqueStatus(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalOEnqueStatus2ᚕgithubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐEnqueStatus(ctx context.Context, sel ast.SelectionSet, v []model.EnqueStatus) graphql.Marshaler {
+func (ec *executionContext) marshalOStatus2ᚕgithubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐStatusᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Status) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -2736,7 +2897,7 @@ func (ec *executionContext) marshalOEnqueStatus2ᚕgithubᚗcomᚋbpetersᚑcmu�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalOEnqueStatus2githubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐEnqueStatus(ctx, sel, v[i])
+			ret[i] = ec.marshalNStatus2githubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐStatus(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -2747,14 +2908,13 @@ func (ec *executionContext) marshalOEnqueStatus2ᚕgithubᚗcomᚋbpetersᚑcmu�
 	}
 	wg.Wait()
 
-	return ret
-}
-
-func (ec *executionContext) marshalOIp2ᚖgithubᚗcomᚋbpetersᚑcmuᚋdnsᚑthreatᚑanalyserᚋgraphᚋmodelᚐIP(ctx context.Context, sel ast.SelectionSet, v *model.IP) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
 	}
-	return ec._Ip(ctx, sel, v)
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
