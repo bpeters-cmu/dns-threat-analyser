@@ -27,11 +27,11 @@ docker build -t benpeters/dns-threat-analyser .
 PORT=8080; docker run -p 127.0.0.1:$PORT:$PORT --env PORT=$PORT benpeters/dns-threat-analyser:latest
 ```
 ### How to use the service
-After starting the service using the command above it will be available to query at `127.0.0.1:8080/graphql`
+After starting the service it will be available to query at `127.0.0.1:8080/graphql`
 
 The service provides the following queries and mutations:
-* mutation enque - Looks up a list of IP's against the spamhause DNSB and stores the result in sqlite. It will return a list with status update for each IP provided
-* query getIpDetails - Queries sqlite for a given IP and returns result from DB
+* mutation **enque** - Looks up a list of IP's against the spamhause DNSB and stores the result in sqlite. It will return a list with status update for each IP provided
+* query **getIpDetails** - Queries sqlite for a given IP and returns result from DB
 
 The quickest way to get started querying the service is by using the following postman collection [Postman Collection](https://www.getpostman.com/collections/7975261e44b3d5b3673d)
 
@@ -102,3 +102,47 @@ Sample result:
 }
 ```
 Example query for getIpDetails:
+```
+query getIPDetails ($ip: String!) {
+    getIPDetails (ip: $ip) {
+        ... on SuccessStatus {
+            ip {
+                uuid
+                created_at
+                updated_at
+                response_code
+                ip_address
+            }
+        }
+        ... on ErrorStatus {
+            error {
+                ip_address
+                error_message
+                error_code
+            }
+        }
+    }
+}
+```
+variables:
+```
+{
+  "ip": "127.0.0.2"
+}
+```
+sample response:
+```
+{
+    "data": {
+        "getIPDetails": {
+            "ip": {
+                "uuid": "c3e91d4b-c9eb-4576-b6db-93d9e196935d",
+                "created_at": "2021-10-31T19:25:40Z",
+                "updated_at": "2021-10-31T19:25:40Z",
+                "response_code": "127.0.0.2\n127.0.0.10\n127.0.0.4",
+                "ip_address": "127.0.0.2"
+            }
+        }
+    }
+}
+```
