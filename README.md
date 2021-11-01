@@ -67,7 +67,7 @@ variables:
   ]
 }
 ```
-Sample result:
+Sample response:
 ```
 {
     "data": {
@@ -130,7 +130,7 @@ variables:
   "ip": "127.0.0.2"
 }
 ```
-sample response:
+Sample response:
 ```
 {
     "data": {

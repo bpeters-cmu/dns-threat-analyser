@@ -66,7 +66,7 @@ func (sqlDb *SqliteDB) GetIp(ipAddr string) (*model.IP, error) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, errors.New("Query returned no data")
+			return nil, nil
 		} else {
 			return nil, err
 		}

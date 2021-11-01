@@ -31,7 +31,7 @@ func (r *mutationResolver) Enque(ctx context.Context, ips []string) ([]model.Sta
 func (r *queryResolver) GetIPDetails(ctx context.Context, ip string) (model.Status, error) {
 	err := dns.ValidateIp(ip)
 	if err != nil {
-		return nil, err
+		return model.ErrorStatus{Error: &model.Error{IPAddress: ip, ErrorMessage: err.Error(), ErrorCode: dns.ValidationError}}, nil
 	}
 	db := database.SqliteDB{}
 	ipDetails, err := db.GetIp(ip)

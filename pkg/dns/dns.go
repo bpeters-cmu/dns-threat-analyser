@@ -14,8 +14,8 @@ import (
 
 const (
 	spamhauseUrl    = ".zen.spamhaus.org"
-	validationError = "VALIDATION_ERROR"
-	systemError     = "SYSTEM_ERROR"
+	ValidationError = "VALIDATION_ERROR"
+	SystemError     = "SYSTEM_ERROR"
 )
 
 type DnsClient interface {
@@ -25,23 +25,31 @@ type DnsClient interface {
 type DigClient struct {
 }
 
+// Dig sends a dig command to the spamhause service and formats the response code
 func (dc *DigClient) Dig(query string) (string, error) {
 	stdout, err := exec.Command("dig", "+short", query).Output()
 	if err != nil {
 		return "", errors.New("ERROR executing host command for dns lookup")
 	}
+	// an ip lookup can have multiple return codes each on a new line
+	// this will clean it up to be more readable
 	responseCode := string(stdout)
+	responseCode = strings.TrimRight(responseCode, "\n")
+	responseCode = strings.ReplaceAll(responseCode, "\n", ", ")
 	// Spamhause returns empty string if record is not listed for dig +short cmd
 	if responseCode == "" {
 		responseCode = "NOT LISTED"
 	}
-	return strings.TrimRight(responseCode, "\n"), nil
+
+	return responseCode, nil
 }
 
+// HandleDnsLookup validates the input ip, calls the spamhause service
+// for the lookup then creates or updates a db entry for the IP
 func HandleDnsLookup(ipAddr string, db database.Database, dc DnsClient, resultsChan chan model.Status) {
 	// Validate IP before lookup
 	if err := ValidateIp(ipAddr); err != nil {
-		resultsChan <- model.ErrorStatus{Error: &model.Error{IPAddress: ipAddr, ErrorMessage: err.Error(), ErrorCode: validationError}}
+		resultsChan <- model.ErrorStatus{Error: &model.Error{IPAddress: ipAddr, ErrorMessage: err.Error(), ErrorCode: ValidationError}}
 		return
 	}
 	// Format dns lookup query
@@ -50,17 +58,21 @@ func HandleDnsLookup(ipAddr string, db database.Database, dc DnsClient, resultsC
 	// Call spamhause url for lookup
 	responseCode, err := dc.Dig(query)
 	if err != nil {
-		resultsChan <- model.ErrorStatus{Error: &model.Error{IPAddress: ipAddr, ErrorMessage: err.Error(), ErrorCode: systemError}}
+		resultsChan <- model.ErrorStatus{Error: &model.Error{IPAddress: ipAddr, ErrorMessage: err.Error(), ErrorCode: SystemError}}
 		return
 	}
 
 	// Check if IP already exist in DB
 	existingIp, err := db.GetIp(ipAddr)
 	if err != nil {
+		resultsChan <- model.ErrorStatus{Error: &model.Error{IPAddress: ipAddr, ErrorMessage: err.Error(), ErrorCode: SystemError}}
+		return
+	}
+	if existingIp == nil {
 		// IP doesn't exist in DB so will attempt to create and insert a new IP
 		ip := model.IP{IPAddress: ipAddr, UUID: uuid.NewString(), ResponseCode: responseCode, CreatedAt: time.Now(), UpdatedAt: time.Now()}
 		if err = db.SaveIp(&ip); err != nil {
-			resultsChan <- model.ErrorStatus{Error: &model.Error{IPAddress: ipAddr, ErrorMessage: err.Error(), ErrorCode: systemError}}
+			resultsChan <- model.ErrorStatus{Error: &model.Error{IPAddress: ipAddr, ErrorMessage: err.Error(), ErrorCode: SystemError}}
 			return
 		}
 		resultsChan <- model.SuccessStatus{IP: &ip}
@@ -70,7 +82,7 @@ func HandleDnsLookup(ipAddr string, db database.Database, dc DnsClient, resultsC
 	existingIp.ResponseCode = responseCode
 	existingIp.UpdatedAt = time.Now()
 	if err = db.SaveIp(existingIp); err != nil {
-		resultsChan <- model.ErrorStatus{Error: &model.Error{IPAddress: ipAddr, ErrorMessage: err.Error(), ErrorCode: systemError}}
+		resultsChan <- model.ErrorStatus{Error: &model.Error{IPAddress: ipAddr, ErrorMessage: err.Error(), ErrorCode: SystemError}}
 		return
 	}
 
@@ -79,6 +91,8 @@ func HandleDnsLookup(ipAddr string, db database.Database, dc DnsClient, resultsC
 
 }
 
+// ValidateIp validates that the input string
+// is a valid IPv4 address
 func ValidateIp(ipAddr string) error {
 	if net.ParseIP(ipAddr) == nil {
 		return errors.New("Provided IP is not valid")
@@ -89,7 +103,7 @@ func ValidateIp(ipAddr string) error {
 	return nil
 }
 
-//referenced from https://golangcookbook.com/chapters/arrays/reverse/
+//reverse a string array, referenced from https://golangcookbook.com/chapters/arrays/reverse/
 func reverse(s []string) []string {
 	for i := 0; i < len(s)/2; i++ {
 		j := len(s) - i - 1
