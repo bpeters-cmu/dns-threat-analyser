@@ -162,3 +162,10 @@ To run the integration smoketest client directly
 ```
 go run cmd/client/smoketest.go
 ```
+
+### External Libraries Used
+* github.com/99designs/gqlgen - Used to generate graphql boilerplate
+* github.com/go-chi/chi - Used as a basic auth middleware router
+* github.com/google/uuid - Used to generate UUID
+* github.com/machinebox/graphql - Used as a graphql client for smoketest
+* github.com/mattn/go-sqlite3 - Used to access sqlite db
