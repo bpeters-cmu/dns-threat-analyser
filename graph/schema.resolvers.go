@@ -16,6 +16,7 @@ const (
 	notFoundError = "NOT_FOUND"
 )
 
+// Enque returns a list of status of all the input ip that describes the result of operation
 func (r *mutationResolver) Enque(ctx context.Context, ips []string) ([]model.Status, error) {
 	resultsChan := make(chan model.Status, len(ips))
 	response := make([]model.Status, 0)
@@ -28,6 +29,7 @@ func (r *mutationResolver) Enque(ctx context.Context, ips []string) ([]model.Sta
 	return response, nil
 }
 
+// GetIPDetails returns IP if found in the database or notFoundError
 func (r *queryResolver) GetIPDetails(ctx context.Context, ip string) (model.Status, error) {
 	err := dns.ValidateIp(ip)
 	if err != nil {
@@ -39,7 +41,7 @@ func (r *queryResolver) GetIPDetails(ctx context.Context, ip string) (model.Stat
 		return model.ErrorStatus{Error: &model.Error{IPAddress: ip, ErrorMessage: err.Error(), ErrorCode: dns.SystemError}}, nil
 	}
 	if ipDetails == nil {
-		return model.ErrorStatus{Error: &model.Error{IPAddress: ip, ErrorMessage: err.Error(), ErrorCode: notFoundError}}, nil
+		return model.ErrorStatus{Error: &model.Error{IPAddress: ip, ErrorMessage: "Requested IP is not found in DB", ErrorCode: notFoundError}}, nil
 	}
 
 	return model.SuccessStatus{IP: ipDetails}, nil

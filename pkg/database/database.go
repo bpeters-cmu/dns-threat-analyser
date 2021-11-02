@@ -14,6 +14,7 @@ import (
 
 var db *sql.DB
 
+// InitDB removes existing db file and creates a new DB and table for IP
 func InitDB() {
 	os.Remove("./threat_analyser.db")
 
@@ -44,6 +45,7 @@ type Database interface {
 type SqliteDB struct {
 }
 
+// SaveIp writes a model.IP to the database or updates it if already exists
 func (sqlDb *SqliteDB) SaveIp(ip *model.IP) error {
 	upsert, err := db.Prepare("INSERT OR REPLACE INTO ip (ip_address, uuid, created_at, updated_at, response_code) VALUES (?, ?, ?, ?, ?)")
 	defer upsert.Close()
@@ -58,12 +60,12 @@ func (sqlDb *SqliteDB) SaveIp(ip *model.IP) error {
 	return nil
 }
 
+// GetIp returns a model.IP if record is stored in the database or nil if not exists
 func (sqlDb *SqliteDB) GetIp(ipAddr string) (*model.IP, error) {
 	row := db.QueryRow("SELECT * FROM ip WHERE ip_address = ?", ipAddr)
 	ip := model.IP{}
 
 	err := row.Scan(&ip.IPAddress, &ip.UUID, &ip.CreatedAt, &ip.UpdatedAt, &ip.ResponseCode)
-
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil

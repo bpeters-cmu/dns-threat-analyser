@@ -24,10 +24,10 @@ To change the port the server runs on, modify the `PORT` variable in the below c
 ```
 cd dns-threat-analyser
 docker build -t benpeters/dns-threat-analyser .
-PORT=8080; docker run -p 127.0.0.1:$PORT:$PORT --env PORT=$PORT benpeters/dns-threat-analyser:latest
+PORT=8080; docker run --name dta -p 127.0.0.1:$PORT:$PORT --env PORT=$PORT benpeters/dns-threat-analyser:latest
 ```
 ### How to use the service
-After starting the service it will be available to query at `127.0.0.1:8080/graphql`
+After starting the service it will be available to query at `127.0.0.1:8080/graphql` or at the custom port provided
 
 The service provides the following queries and mutations:
 * mutation **enque** - Looks up a list of IP's against the spamhause DNSB and stores the result in sqlite. It will return a list with status update for each IP provided
@@ -154,6 +154,11 @@ Run the unit tests with the following command from the main directory:
 `go test ./pkg/dns -v`
 
 ### Integration Smoketest
-To run the integration smoketest:
-`go run cmd/client/smoketest.go`
-
+After starting the application in docker, the integration smoketest script can be ran, which will start another container and run the smoketest client. The smoketest script will automatically find the IP and exposed port of the app
+```
+./smoketest.sh
+```
+To run the integration smoketest client directly
+```
+go run cmd/client/smoketest.go
+```

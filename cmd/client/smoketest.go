@@ -4,21 +4,26 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/machinebox/graphql"
 )
 
-// For running on docker
-const url string = "http://172.17.0.1:8080/graphql"
-
-// For Local
-//const url string = "http://localhost:8080/graphql"
-
+var url string
 var client *graphql.Client
 
 func main() {
+	ip := os.Getenv("IP")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	if ip == "" {
+		ip = "localhost"
+	}
+	url = "http://" + ip + ":" + port + "/graphql"
 	client = graphql.NewClient(url)
 	testAuth()
 	testEnque()
@@ -78,6 +83,7 @@ func testEnque() {
 
 	// Map of ip input to expected response_code or error_code
 	testCases := map[string]string{
+		"":                                       "VALIDATION_ERROR",
 		"127.0.0.1":                              "NOT LISTED",
 		"127.0.0.2":                              "127.0.0.2",
 		"1.2.3.4":                                "127.0.0.4",
@@ -146,6 +152,7 @@ func testGetIpDetails() {
 
 	// Map of ip input to expected response_code or error_code
 	testCases := map[string]string{
+		"0.0.0.0":                                "NOT_FOUND",
 		"127.0.0.1":                              "NOT LISTED",
 		"127.0.0.2":                              "127.0.0.2",
 		"1.2.3.4":                                "127.0.0.4",
