@@ -146,3 +146,14 @@ Sample response:
     }
 }
 ```
+## Testing
+### Unit tests
+Unit tests are located at `pkg/dns/dns_test.go` it is using mocks for the database calls and dns host lookup
+
+Run the unit tests with the following command from the main directory:
+`go test ./pkg/dns -v`
+
+### Integration Smoketest
+To run the integration smoketest:
+`go run cmd/client/smoketest.go`
+

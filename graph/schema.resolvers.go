@@ -36,8 +36,12 @@ func (r *queryResolver) GetIPDetails(ctx context.Context, ip string) (model.Stat
 	db := database.SqliteDB{}
 	ipDetails, err := db.GetIp(ip)
 	if err != nil {
+		return model.ErrorStatus{Error: &model.Error{IPAddress: ip, ErrorMessage: err.Error(), ErrorCode: dns.SystemError}}, nil
+	}
+	if ipDetails == nil {
 		return model.ErrorStatus{Error: &model.Error{IPAddress: ip, ErrorMessage: err.Error(), ErrorCode: notFoundError}}, nil
 	}
+
 	return model.SuccessStatus{IP: ipDetails}, nil
 }
 
